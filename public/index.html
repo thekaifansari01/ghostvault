@@ -137,7 +137,12 @@
             <div class="modal-drag-handle"></div>
             <div class="modal-header">
                 <span id="preview-title">preview</span>
-                <button id="preview-close" class="btn-ghost btn-icon" aria-label="Close">✕</button>
+                <div class="modal-header-actions">
+                    <button id="preview-copy" class="btn-ghost btn-icon hidden" aria-label="Copy content">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                    <button id="preview-close" class="btn-ghost btn-icon" aria-label="Close">✕</button>
+                </div>
             </div>
             <div id="preview-body"></div>
         </div>
@@ -156,8 +161,24 @@
         </div>
     </div>
 
+    <div id="rename-modal" class="modal hidden">
+        <div class="modal-backdrop" data-close-rename></div>
+        <div class="confirm-content">
+            <div class="confirm-icon">✏️</div>
+            <h4>rename file</h4>
+            <p id="rename-subtitle" class="rename-subtitle"></p>
+            <input type="text" id="rename-input" class="rename-input" placeholder="new name" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="200">
+            <div class="confirm-actions">
+                <button class="btn-ghost" id="rename-cancel">cancel</button>
+                <button class="btn-accent" id="rename-ok">rename</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container" class="toast-container"></div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="/app.js"></script>
 </body>
 </html>

@@ -41,8 +41,8 @@ BLOB_TIMEOUT = 15
 
 BLOCKED_EXTENSIONS = {
     "exe", "bat", "cmd", "com", "msi", "dll", "scr", "vbs", "vbe",
-    "js", "jse", "wsf", "wsh", "ps1", "psm1", "jar", "app", "deb",
-    "rpm", "dmg", "pkg", "sh", "bash", "run", "bin",
+    "jse", "wsf", "wsh", "ps1", "psm1", "jar", "app", "deb",
+    "rpm", "dmg", "pkg", "run", "bin",
 }
 
 ph = PasswordHasher()
@@ -66,12 +66,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "img-src 'self' https: data:; "
-            "script-src 'self'; "
+            "img-src 'self' https: data: blob:; "
+            "media-src 'self' https: data: blob:; "
+            "script-src 'self' https://cdnjs.cloudflare.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "connect-src 'self' https:; "
-            "frame-src https: data:;"
+            "frame-src https: data: blob:;"
         )
         return response
 
@@ -94,6 +95,11 @@ def rate_limit(bucket: str, client_id: str, max_requests: int, window_seconds: i
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class RenameRequest(BaseModel):
+    key: str
+    new_name: str
 
 
 def create_token(username: str) -> str:
@@ -160,6 +166,49 @@ def check_file_extension(filename: str):
         )
 
 
+def sanitize_filename(name: str) -> str:
+    safe = os.path.basename(name).replace("/", "_").replace("\\", "_").replace("\x00", "").strip()
+    if not safe:
+        raise HTTPException(status_code=400, detail="Invalid file name")
+    if len(safe) > 200:
+        raise HTTPException(status_code=400, detail="File name too long")
+    return safe
+
+
+def upload_to_blob(key: str, data: bytes, content_type: str):
+    try:
+        resp = requests.put(
+            f"{BLOB_BASE_URL}/{key}",
+            data=data,
+            headers={
+                "authorization": f"Bearer {BLOB_READ_WRITE_TOKEN}",
+                "x-api-version": BLOB_API_VERSION,
+                "x-content-type": content_type,
+                "x-access": "public",
+                "x-add-random-suffix": "0",
+            },
+            timeout=BLOB_TIMEOUT,
+        )
+    except requests.RequestException:
+        raise HTTPException(status_code=503, detail="Storage service unreachable")
+
+    if resp.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail="Upload failed")
+    return resp
+
+
+def delete_from_blob(url: str):
+    try:
+        return requests.post(
+            f"{BLOB_BASE_URL}/delete",
+            json={"urls": [url]},
+            headers=blob_headers(),
+            timeout=BLOB_TIMEOUT,
+        )
+    except requests.RequestException:
+        raise HTTPException(status_code=503, detail="Storage service unreachable")
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "GhostVault"}
@@ -222,29 +271,11 @@ async def upload_file(request: Request, file: UploadFile = File(...), user: str 
     if len(data) == 0:
         raise HTTPException(status_code=400, detail="Empty file not allowed.")
 
-    safe_name = os.path.basename(raw_name).replace("/", "_").replace("\\", "_")
+    safe_name = sanitize_filename(raw_name)
     key = f"{uuid.uuid4().hex[:8]}_{safe_name}"
     content_type = file.content_type or "application/octet-stream"
 
-    try:
-        resp = requests.put(
-            f"{BLOB_BASE_URL}/{key}",
-            data=data,
-            headers={
-                "authorization": f"Bearer {BLOB_READ_WRITE_TOKEN}",
-                "x-api-version": BLOB_API_VERSION,
-                "x-content-type": content_type,
-                "x-access": "public",
-                "x-add-random-suffix": "0",
-            },
-            timeout=BLOB_TIMEOUT,
-        )
-    except requests.RequestException:
-        raise HTTPException(status_code=503, detail="Storage service unreachable")
-
-    if resp.status_code not in (200, 201):
-        raise HTTPException(status_code=500, detail="Upload failed")
-
+    upload_to_blob(key, data, content_type)
     return {"status": "uploaded", "key": key}
 
 
@@ -294,8 +325,8 @@ def preview_file(key: str, request: Request, user: str = Depends(verify_token)):
         "txt", "md", "py", "js", "ts", "jsx", "tsx", "html", "css", "scss",
         "json", "xml", "yaml", "yml", "toml", "ini", "cfg", "conf", "env",
         "csv", "log", "sh", "bash", "zsh", "sql", "go", "rs", "java", "c",
-        "cpp", "h", "hpp", "cs", "rb", "php", "swift", "kt", "dart", "r",
-        "lua", "pl", "vim", "dockerfile", "makefile", "gitignore",
+        "cpp", "cc", "cxx", "h", "hpp", "cs", "rb", "php", "swift", "kt", "dart",
+        "r", "lua", "pl", "vim", "dockerfile", "makefile", "gitignore",
     }
 
     ext = ""
@@ -311,11 +342,56 @@ def preview_file(key: str, request: Request, user: str = Depends(verify_token)):
             text = content.decode("utf-8", errors="replace")
         except Exception:
             text = ""
-        return {"type": "text", "content": text, "content_type": content_type or "text/plain"}
+        return {
+            "type": "text",
+            "content": text,
+            "content_type": content_type or "text/plain",
+            "extension": ext,
+        }
 
     b64 = base64.b64encode(content).decode("ascii")
     data_url = f"data:{content_type};base64,{b64}"
     return {"type": "binary", "url": data_url, "content_type": content_type}
+
+
+@app.post("/api/rename")
+def rename_file(req: RenameRequest, request: Request, user: str = Depends(verify_token)):
+    rate_limit("rename", user, max_requests=60, window_seconds=3600)
+
+    target = find_blob(req.key)
+    if not target:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    safe_name = sanitize_filename(req.new_name)
+    check_file_extension(safe_name)
+
+    old_key = target["pathname"]
+    idx = old_key.find("_")
+    prefix = old_key[:idx] if idx > 0 else uuid.uuid4().hex[:8]
+    new_key = f"{prefix}_{safe_name}"
+
+    if new_key == old_key:
+        return {"status": "unchanged", "key": old_key}
+
+    for b in list_all_blobs():
+        if b["pathname"] == new_key:
+            raise HTTPException(status_code=409, detail="A file with that name already exists")
+
+    try:
+        with urllib.request.urlopen(target["url"], timeout=BLOB_TIMEOUT) as resp:
+            content = resp.read()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Failed to fetch file")
+
+    content_type = target.get("contentType", "application/octet-stream")
+    upload_to_blob(new_key, content, content_type)
+
+    try:
+        delete_from_blob(target["url"])
+    except HTTPException:
+        pass
+
+    return {"status": "renamed", "key": new_key}
 
 
 @app.delete("/api/delete-file")
@@ -326,16 +402,7 @@ def delete_file(key: str, request: Request, user: str = Depends(verify_token)):
     if not target:
         raise HTTPException(status_code=404, detail="File not found")
 
-    try:
-        resp = requests.post(
-            f"{BLOB_BASE_URL}/delete",
-            json={"urls": [target["url"]]},
-            headers=blob_headers(),
-            timeout=BLOB_TIMEOUT,
-        )
-    except requests.RequestException:
-        raise HTTPException(status_code=503, detail="Storage service unreachable")
-
+    resp = delete_from_blob(target["url"])
     if resp.status_code not in (200, 204):
         raise HTTPException(status_code=500, detail="Delete failed")
 
