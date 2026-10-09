@@ -1,184 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#08080c">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>GhostVault ✦ Your Private Cloud</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#050509">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="GhostVault — your files, your rules, zero traces.">
+<title>GhostVault · your files, your rules</title>
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-    <div class="aurora"></div>
-    <div class="noise"></div>
+<!-- background layers -->
+<div class="bg-stack" aria-hidden="true">
+  <div class="bg-aurora"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-noise"></div>
+  <div class="bg-vignette"></div>
+</div>
 
-    <div id="login-view" class="view">
-        <div class="login-card">
-            <div class="brand">
-                <div class="brand-icon">
-                    <span>👻</span>
-                    <div class="brand-glow"></div>
-                </div>
-                <h1>Ghost<span>Vault</span></h1>
-                <p class="tagline">your files · your rules · zero traces</p>
-            </div>
-            <form id="login-form" autocomplete="on">
-                <div class="field">
-                    <label for="username">username</label>
-                    <input type="text" id="username" placeholder="who goes there?" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required>
-                </div>
-                <div class="field">
-                    <label for="password">password</label>
-                    <div class="password-wrap">
-                        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
-                        <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Toggle password">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <button type="submit" class="btn-primary" id="login-btn">
-                    <span class="btn-text">enter vault</span>
-                    <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    <span class="btn-spinner hidden"></span>
-                </button>
-            </form>
-            <div id="login-error" class="error"></div>
+<!-- network banner -->
+<div id="net-banner" class="net-banner hidden" role="status" aria-live="polite">
+  <span class="net-dot"></span>
+  <span id="net-text">you're offline — changes won't sync</span>
+</div>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<section id="login-view" class="view login-view">
+  <div class="login-shell">
+    <div class="login-card">
+      <header class="brand">
+        <div class="brand-logo-wrap">
+          <img src="/assets/favicon.png" alt="" class="brand-logo" draggable="false">
+          <span class="brand-logo-glow" aria-hidden="true"></span>
         </div>
-    </div>
+        <h1 class="brand-name">Ghost<span>Vault</span></h1>
+        <p class="brand-tagline">your files · your rules · zero traces</p>
+      </header>
 
-    <div id="app-view" class="view hidden">
-        <header class="topbar">
-            <div class="topbar-brand">
-                <span class="brand-icon-sm">👻</span>
-                <span class="brand-name">GhostVault</span>
-            </div>
-            <button id="logout-btn" class="btn-ghost">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-                <span>logout</span>
+      <form id="login-form" autocomplete="on" novalidate>
+        <div class="field">
+          <label for="username">username</label>
+          <div class="input-wrap">
+            <input type="text" id="username" name="username"
+              placeholder="who goes there?"
+              autocomplete="username" autocapitalize="off"
+              autocorrect="off" spellcheck="false"
+              aria-label="Username" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="password">password</label>
+          <div class="input-wrap password-wrap">
+            <input type="password" id="password" name="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              aria-label="Password" required>
+            <button type="button" class="pw-toggle" id="pw-toggle"
+              aria-label="Show password" aria-pressed="false">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                <path d="m2 2 20 20"/><path d="M6.7 6.7C4 8.6 2 12 2 12s3 7 10 7c2 0 3.6-.6 5-1.5"/><path d="M9.9 4.2A10 10 0 0 1 12 4c7 0 10 7 10 7a17 17 0 0 1-3.2 4"/>
+              </svg>
             </button>
-        </header>
+          </div>
+        </div>
 
-        <main>
-            <section class="hero">
-                <div class="hero-text">
-                    <h2>hey there <span class="wave">👋</span></h2>
-                    <p>drop your files, keep them safe. nothing lingers after you leave.</p>
-                </div>
-            </section>
-
-            <section class="stats">
-                <div class="stat-card">
-                    <div class="stat-icon stat-icon-files">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
-                    </div>
-                    <div class="stat-body">
-                        <div class="stat-label">files</div>
-                        <div class="stat-value" id="stat-count">0</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon stat-icon-size">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9Z"/><path d="M12 7v5l3 2"/></svg>
-                    </div>
-                    <div class="stat-body">
-                        <div class="stat-label">storage</div>
-                        <div class="stat-value" id="stat-size">0 B</div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="upload-zone" id="upload-zone">
-                <input type="file" id="file-input" hidden>
-                <div class="upload-inner">
-                    <div class="upload-icon-wrap">
-                        <div class="upload-icon-pulse"></div>
-                        <div class="upload-icon">☁️</div>
-                    </div>
-                    <div class="upload-text">
-                        <strong>drop it like it's hot</strong>
-                        <span>or <u>tap to browse</u> · max 4 MB</span>
-                    </div>
-                </div>
-                <div id="upload-status" class="upload-status"></div>
-                <div class="upload-progress hidden" id="upload-progress">
-                    <div class="progress-track">
-                        <div class="progress-bar" id="progress-bar"></div>
-                    </div>
-                    <div class="progress-percent" id="progress-percent">0%</div>
-                </div>
-            </section>
-
-            <section class="files-section">
-                <div class="section-header">
-                    <h3>your stash</h3>
-                    <div class="search-box" id="search-box">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                        <input type="text" id="search-input" placeholder="search files..." autocapitalize="off" autocorrect="off" spellcheck="false">
-                        <button type="button" class="search-clear hidden" id="search-clear" aria-label="Clear search">✕</button>
-                    </div>
-                </div>
-                <div id="files-list"></div>
-            </section>
-        </main>
-
-        <button id="fab-upload" class="fab" aria-label="Upload file">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M12 5v14M5 12h14"/></svg>
+        <button type="submit" class="btn-primary" id="login-btn">
+          <span class="btn-text">enter vault</span>
+          <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <span class="btn-spinner hidden" aria-hidden="true"></span>
         </button>
+      </form>
+
+      <div id="login-error" class="error" role="alert" aria-live="polite"></div>
     </div>
 
-    <div id="preview-modal" class="modal hidden">
-        <div class="modal-backdrop" data-close></div>
-        <div class="modal-content">
-            <div class="modal-drag-handle"></div>
-            <div class="modal-header">
-                <span id="preview-title">preview</span>
-                <div class="modal-header-actions">
-                    <button id="preview-copy" class="btn-ghost btn-icon hidden" aria-label="Copy content">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                    </button>
-                    <button id="preview-close" class="btn-ghost btn-icon" aria-label="Close">✕</button>
-                </div>
-            </div>
-            <div id="preview-body"></div>
+    <p class="login-foot">press <kbd>enter</kbd> to jump in ✨</p>
+  </div>
+</section>
+
+<!-- ══════════════ APP ══════════════ -->
+<section id="app-view" class="view app-view hidden">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <img src="/assets/favicon.png" alt="" class="brand-logo-sm" draggable="false">
+      <span class="brand-name-sm">GhostVault</span>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="search-box" id="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="search-input" placeholder="search…" aria-label="Search files"
+          autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button type="button" class="search-clear hidden" id="search-clear" aria-label="Clear search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <button id="logout-btn" class="btn-icon-ghost" aria-label="Logout" title="logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <section class="hero">
+      <div class="hero-text">
+        <h2>hey there <span class="wave">👋</span></h2>
+        <p>drop your files, keep them safe. <span class="hl">nothing lingers</span> after you leave.</p>
+      </div>
+      <div class="hero-orbs" aria-hidden="true">
+        <span class="orb orb-1"></span>
+        <span class="orb orb-2"></span>
+        <span class="orb orb-3"></span>
+      </div>
+    </section>
+
+    <section class="stats">
+      <article class="stat-card">
+        <div class="stat-icon stat-icon-files">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
         </div>
-    </div>
-
-    <div id="confirm-modal" class="modal hidden">
-        <div class="modal-backdrop" data-close-confirm></div>
-        <div class="confirm-content">
-            <div class="confirm-icon">🗑️</div>
-            <h4 id="confirm-title">are you sure?</h4>
-            <p id="confirm-message">this action cannot be undone.</p>
-            <div class="confirm-actions">
-                <button class="btn-ghost" id="confirm-cancel">cancel</button>
-                <button class="btn-danger" id="confirm-ok">delete</button>
-            </div>
+        <div class="stat-body">
+          <div class="stat-label">files</div>
+          <div class="stat-value" id="stat-count">0</div>
         </div>
-    </div>
+      </article>
 
-    <div id="rename-modal" class="modal hidden">
-        <div class="modal-backdrop" data-close-rename></div>
-        <div class="confirm-content">
-            <div class="confirm-icon">✏️</div>
-            <h4>rename file</h4>
-            <p id="rename-subtitle" class="rename-subtitle"></p>
-            <input type="text" id="rename-input" class="rename-input" placeholder="new name" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="200">
-            <div class="confirm-actions">
-                <button class="btn-ghost" id="rename-cancel">cancel</button>
-                <button class="btn-accent" id="rename-ok">rename</button>
-            </div>
+      <article class="stat-card">
+        <div class="stat-icon stat-icon-size">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         </div>
+        <div class="stat-body">
+          <div class="stat-label">storage</div>
+          <div class="stat-value" id="stat-size">0 B</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="upload-zone" id="upload-zone" tabindex="0" role="button" aria-label="Upload files">
+      <input type="file" id="file-input" multiple hidden>
+      <div class="upload-inner">
+        <div class="upload-icon-wrap">
+          <span class="upload-pulse"></span>
+          <span class="upload-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="34" height="34"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+          </span>
+        </div>
+        <div class="upload-text">
+          <strong>drop it like it's hot</strong>
+          <span>or <u>tap to browse</u> · paste · multiple allowed</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Upload queue -->
+    <section id="upload-queue" class="upload-queue hidden" aria-live="polite"></section>
+
+    <section class="files-section">
+      <div class="section-header">
+        <h3>your stash</h3>
+        <span class="count-chip" id="files-count-chip"></span>
+      </div>
+      <div id="files-list" class="files-list"></div>
+    </section>
+
+  </main>
+
+  <button id="fab-upload" class="fab" aria-label="Upload files">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+</section>
+
+<!-- ══════════════ PREVIEW MODAL ══════════════ -->
+<div id="preview-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+  <div class="modal-backdrop" data-close-preview></div>
+  <div class="modal-content preview-content">
+    <div class="modal-drag-handle" aria-hidden="true"></div>
+    <header class="modal-header">
+      <span id="preview-title">preview</span>
+      <div class="modal-header-actions">
+        <button id="preview-download" class="btn-icon-ghost" aria-label="Download" title="download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+        </button>
+        <button id="preview-copy" class="btn-icon-ghost hidden" aria-label="Copy content" title="copy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <button id="preview-close" class="btn-icon-ghost" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+    <div id="preview-body" class="preview-body"></div>
+  </div>
+</div>
+
+<!-- ══════════════ CONFIRM MODAL ══════════════ -->
+<div id="confirm-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="modal-backdrop" data-close-confirm></div>
+  <div class="confirm-content">
+    <div class="confirm-icon" id="confirm-icon">🗑️</div>
+    <h4 id="confirm-title">are you sure?</h4>
+    <p id="confirm-message">this action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn-ghost" id="confirm-cancel">cancel</button>
+      <button class="btn-danger" id="confirm-ok">delete</button>
     </div>
+  </div>
+</div>
 
-    <div id="toast-container" class="toast-container"></div>
+<!-- ══════════════ RENAME MODAL ══════════════ -->
+<div id="rename-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rename-title">
+  <div class="modal-backdrop" data-close-rename></div>
+  <div class="confirm-content">
+    <div class="confirm-icon">✏️</div>
+    <h4 id="rename-title">rename file</h4>
+    <p id="rename-subtitle" class="rename-subtitle"></p>
+    <input type="text" id="rename-input" class="rename-input" placeholder="new name"
+      autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="200">
+    <div class="confirm-actions">
+      <button class="btn-ghost" id="rename-cancel">cancel</button>
+      <button class="btn-accent" id="rename-ok">rename</button>
+    </div>
+  </div>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-    <script src="/app.js"></script>
+<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+<script src="/app.js" defer></script>
 </body>
 </html>
