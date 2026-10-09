@@ -6,7 +6,6 @@ import hmac
 import time
 import uuid
 import base64
-import mimetypes
 import urllib.request
 import requests
 from collections import defaultdict
@@ -18,7 +17,6 @@ from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -91,12 +89,6 @@ def rate_limit(bucket: str, client_id: str, max_requests: int, window_seconds: i
     if len(attempts) >= max_requests:
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
     rate_limit_store[key].append(now)
-
-
-def get_client_id(request: Request, user: str = None) -> str:
-    if user:
-        return user
-    return request.client.host if request.client else "unknown"
 
 
 class LoginRequest(BaseModel):
@@ -348,6 +340,3 @@ def delete_file(key: str, request: Request, user: str = Depends(verify_token)):
         raise HTTPException(status_code=500, detail="Delete failed")
 
     return {"status": "deleted"}
-
-
-app.mount("/", StaticFiles(directory="public", html=True), name="public")
