@@ -1,64 +1,62 @@
-/* ═══════════════════════════════════════════════════════════
-   GhostVault · App Logic
-   Robust, defensive, edge-case aware.
-   ═══════════════════════════════════════════════════════════ */
-
 'use strict';
 
 const API = '/api';
-const MAX_FILE_SIZE = 4 * 1024 * 1024;   // 4 MB per file
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const MAX_CONCURRENT_UPLOADS = 2;
 const MAX_TOTAL_FILES = 50;
 
-/* ── DOM refs ───────────────────────────────────────────── */
 const $ = (id) => document.getElementById(id);
 
-const loginView     = $('login-view');
-const appView       = $('app-view');
-const loginForm     = $('login-form');
-const loginError    = $('login-error');
-const loginBtn      = $('login-btn');
-const logoutBtn     = $('logout-btn');
-const pwToggle      = $('pw-toggle');
+const loginView = $('login-view');
+const appView = $('app-view');
+const loginForm = $('login-form');
+const loginError = $('login-error');
+const loginBtn = $('login-btn');
+const logoutBtn = $('logout-btn');
+const pwToggle = $('pw-toggle');
 const passwordInput = $('password');
+const themeBtn = $('theme-btn');
 
-const uploadZone    = $('upload-zone');
-const fileInput     = $('file-input');
+const uploadZone = $('upload-zone');
+const fileInput = $('file-input');
 const uploadQueueEl = $('upload-queue');
-const fabUpload     = $('fab-upload');
+const fabUpload = $('fab-upload');
 
-const filesList     = $('files-list');
-const searchInput   = $('search-input');
-const searchClear   = $('search-clear');
-const statCount     = $('stat-count');
-const statSize      = $('stat-size');
-const countChip     = $('files-count-chip');
+const filesList = $('files-list');
+const statCount = $('stat-count');
+const statSize = $('stat-size');
+const countChip = $('files-count-chip');
 
-const previewModal  = $('preview-modal');
-const previewBody   = $('preview-body');
-const previewTitle  = $('preview-title');
-const previewClose  = $('preview-close');
-const previewCopy   = $('preview-copy');
+const previewModal = $('preview-modal');
+const previewBody = $('preview-body');
+const previewTitle = $('preview-title');
+const previewClose = $('preview-close');
+const previewCopy = $('preview-copy');
 const previewDownload = $('preview-download');
 
-const confirmModal  = $('confirm-modal');
-const confirmTitle  = $('confirm-title');
-const confirmMessage= $('confirm-message');
-const confirmIcon   = $('confirm-icon');
-const confirmOk     = $('confirm-ok');
+const confirmModal = $('confirm-modal');
+const confirmTitle = $('confirm-title');
+const confirmMessage = $('confirm-message');
+const confirmIcon = $('confirm-icon');
+const confirmOk = $('confirm-ok');
 const confirmCancel = $('confirm-cancel');
 
-const renameModal   = $('rename-modal');
-const renameInput   = $('rename-input');
-const renameSubtitle= $('rename-subtitle');
-const renameOk      = $('rename-ok');
-const renameCancel  = $('rename-cancel');
+const renameModal = $('rename-modal');
+const renameInput = $('rename-input');
+const renameSubtitle = $('rename-subtitle');
+const renameOk = $('rename-ok');
+const renameCancel = $('rename-cancel');
 
 const toastContainer = $('toast-container');
-const netBanner     = $('net-banner');
-const netText       = $('net-text');
+const netBanner = $('net-banner');
+const netText = $('net-text');
 
-/* ── State ──────────────────────────────────────────────── */
+const searchTrigger = $('search-trigger');
+const cpModal = $('command-palette');
+const cpInput = $('cp-input');
+const cpResults = $('cp-results');
+const cpBackdrop = $('cp-backdrop');
+
 const state = {
   token: null,
   expiresAt: 0,
@@ -71,17 +69,15 @@ const state = {
   uploadQueue: [],
   currentPreviewKey: null,
   currentPreviewText: null,
-  searchTimer: null,
   loadingFiles: false,
+  theme: 'default',
 };
 
-/* ── Icon constants ─────────────────────────────────────── */
 const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg>';
 const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 const ICON_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>';
 
-/* ═══════════ Helpers ═══════════ */
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -134,7 +130,92 @@ function uid() {
   return 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-/* ═══════════ Toasts ═══════════ */
+let audioCtx = null;
+function playSound(type) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'click') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.1);
+    } else if (type === 'success') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    } else if (type === 'delete') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.2);
+    }
+  } catch (_) {}
+}
+
+function triggerHaptic() {
+  try { if (navigator.vibrate) navigator.vibrate(50); } catch (_) {}
+}
+
+function initCustomCursor() {
+  if (window.matchMedia('(hover: none)').matches || window.innerWidth <= 768) return;
+  const cursor = $('cursor');
+  const follower = $('cursor-follower');
+  if (!cursor || !follower) return;
+
+  let mouseX = 0, mouseY = 0;
+  let fX = 0, fY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    cursor.style.left = mouseX + 'px';
+    cursor.style.top = mouseY + 'px';
+  });
+
+  function render() {
+    fX += (mouseX - fX) * 0.2;
+    fY += (mouseY - fY) * 0.2;
+    follower.style.left = fX + 'px';
+    follower.style.top = fY + 'px';
+    requestAnimationFrame(render);
+  }
+  render();
+}
+
+document.addEventListener('mouseover', (e) => {
+  const t = e.target.closest('button, input, a, .cursor-magnetic, .file-row, .stat-card, .upload-zone');
+  if (!t) return;
+  const c = $('cursor');
+  const f = $('cursor-follower');
+  if (c) c.classList.add('hover');
+  if (f) f.classList.add('hover');
+});
+
+document.addEventListener('mouseout', (e) => {
+  const t = e.target.closest('button, input, a, .cursor-magnetic, .file-row, .stat-card, .upload-zone');
+  if (!t) return;
+  const c = $('cursor');
+  const f = $('cursor-follower');
+  if (c) c.classList.remove('hover');
+  if (f) f.classList.remove('hover');
+});
+
 const TOAST_ICONS = { success: '✅', error: '⚠️', info: 'ℹ️', warning: '⚡' };
 const TOAST_DURATION = 3400;
 
@@ -159,12 +240,10 @@ function showToast(message, type = 'info', duration = TOAST_DURATION) {
   toastContainer.appendChild(toast);
   setTimeout(dismiss, duration);
 
-  // Cap toasts at 4
   const all = toastContainer.querySelectorAll('.toast:not(.out)');
   if (all.length > 4) all[0].classList.add('out');
 }
 
-/* ═══════════ Focus trap ═══════════ */
 function trapFocus(container) {
   const selector = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
   const handler = (e) => {
@@ -185,7 +264,6 @@ function trapFocus(container) {
   return () => container.removeEventListener('keydown', handler);
 }
 
-/* ═══════════ Confirm dialog ═══════════ */
 let confirmResolve = null;
 let confirmCleanup = null;
 
@@ -222,7 +300,6 @@ confirmOk.addEventListener('click', () => closeConfirm(true));
 confirmCancel.addEventListener('click', () => closeConfirm(false));
 confirmModal.querySelector('[data-close-confirm]').addEventListener('click', () => closeConfirm(false));
 
-/* ═══════════ Rename dialog ═══════════ */
 let renameResolve = null;
 let renameCleanup = null;
 
@@ -280,7 +357,6 @@ renameInput.addEventListener('keydown', (e) => {
   }
 });
 
-/* ═══════════ Password toggle ═══════════ */
 pwToggle.addEventListener('click', () => {
   const isText = passwordInput.type === 'text';
   passwordInput.type = isText ? 'password' : 'text';
@@ -289,7 +365,21 @@ pwToggle.addEventListener('click', () => {
   passwordInput.focus();
 });
 
-/* ═══════════ Network status ═══════════ */
+function applyTheme(theme) {
+  state.theme = theme;
+  document.body.setAttribute('data-theme', theme);
+  try { localStorage.setItem('gv-theme', theme); } catch (_) {}
+}
+
+function toggleTheme() {
+  const next = state.theme === 'matcha' ? 'default' : 'matcha';
+  applyTheme(next);
+  playSound('success');
+  showToast(next === 'matcha' ? 'matcha mode on 🍵' : 'violet mode on 🎨', 'success');
+}
+
+themeBtn.addEventListener('click', toggleTheme);
+
 function updateNetworkStatus() {
   if (navigator.onLine) {
     netBanner.classList.add('hidden');
@@ -302,7 +392,6 @@ window.addEventListener('online', updateNetworkStatus);
 window.addEventListener('offline', updateNetworkStatus);
 updateNetworkStatus();
 
-/* ═══════════ Login ═══════════ */
 function setLoginLoading(loading) {
   const btnText = loginBtn.querySelector('.btn-text');
   const btnArrow = loginBtn.querySelector('.btn-arrow');
@@ -339,6 +428,7 @@ loginForm.addEventListener('submit', async (e) => {
   }
 
   setLoginLoading(true);
+  playSound('click');
 
   try {
     const res = await fetch(`${API}/login`, {
@@ -365,21 +455,30 @@ loginForm.addEventListener('submit', async (e) => {
     }, ttl * 1000);
 
     loginForm.reset();
+    playSound('success');
     showApp();
   } catch (err) {
     loginError.textContent = err.message || 'Login failed';
+    playSound('delete');
   } finally {
     setLoginLoading(false);
   }
 });
 
-/* ═══════════ App / Logout ═══════════ */
+function transitionView(callback) {
+  if (!document.startViewTransition) {
+    callback();
+    return;
+  }
+  document.startViewTransition(() => callback());
+}
+
 function showApp() {
-  loginView.classList.add('hidden');
-  appView.classList.remove('hidden');
+  transitionView(() => {
+    loginView.classList.add('hidden');
+    appView.classList.remove('hidden');
+  });
   state.query = '';
-  searchInput.value = '';
-  searchClear.classList.add('hidden');
   loadFiles();
 }
 
@@ -389,7 +488,6 @@ function doLogout(message) {
   if (state.tokenTimer) clearTimeout(state.tokenTimer);
   state.tokenTimer = null;
 
-  // cancel pending uploads
   for (const task of state.uploadQueue) {
     if (task.xhr && task.status === 'uploading') {
       try { task.xhr.abort(); } catch (_) {}
@@ -400,8 +498,10 @@ function doLogout(message) {
   uploadQueueEl.innerHTML = '';
   uploadQueueEl.classList.add('hidden');
 
-  appView.classList.add('hidden');
-  loginView.classList.remove('hidden');
+  transitionView(() => {
+    appView.classList.add('hidden');
+    loginView.classList.remove('hidden');
+  });
   loginError.textContent = message || '';
 
   filesList.innerHTML = '';
@@ -413,9 +513,11 @@ function doLogout(message) {
   closePreview();
 }
 
-logoutBtn.addEventListener('click', () => doLogout());
+logoutBtn.addEventListener('click', () => {
+  playSound('delete');
+  doLogout();
+});
 
-/* ═══════════ API helper ═══════════ */
 async function api(path, options = {}) {
   if (!state.token) throw new Error('Not authenticated');
 
@@ -438,13 +540,11 @@ async function api(path, options = {}) {
     throw new Error(data.detail || `Request failed (${res.status})`);
   }
 
-  // some endpoints might return empty bodies
   const ct = res.headers.get('content-type') || '';
   if (ct.includes('application/json')) return res.json();
   return {};
 }
 
-/* ═══════════ File type meta ═══════════ */
 const FILE_META = {
   image:   { icon: '🖼️', cls: 'file-icon-image',   exts: ['jpg','jpeg','png','gif','webp','svg','bmp','ico','avif','heic'] },
   video:   { icon: '🎬', cls: 'file-icon-video',   exts: ['mp4','webm','mov','avi','mkv','m4v'] },
@@ -465,7 +565,6 @@ function getFileMeta(name) {
   return { icon: '📄', cls: '', exts: [] };
 }
 
-/* ═══════════ Prism lang mapping ═══════════ */
 function extToPrismLang(ext) {
   const map = {
     html: 'markup', htm: 'markup', xml: 'markup', svg: 'markup', vue: 'markup',
@@ -485,7 +584,6 @@ function extToPrismLang(ext) {
   return map[ext] || null;
 }
 
-/* ═══════════ Skeletons ═══════════ */
 function renderSkeleton(count = 3) {
   filesList.innerHTML = Array.from({ length: count }).map(() => `
     <div class="skeleton-row">
@@ -498,7 +596,6 @@ function renderSkeleton(count = 3) {
   `).join('');
 }
 
-/* ═══════════ Load files ═══════════ */
 async function loadFiles(showSkeleton = true) {
   if (state.loadingFiles) return;
   state.loadingFiles = true;
@@ -530,7 +627,6 @@ async function loadFiles(showSkeleton = true) {
   }
 }
 
-/* ═══════════ Filter / render ═══════════ */
 function applyFilter() {
   const q = state.query.toLowerCase().trim();
   const filtered = q
@@ -598,9 +694,15 @@ function renderFiles(files, query = '') {
         </div>
       </div>`;
   }).join('');
+
+  initTiltOn(filesList.querySelectorAll('.file-row'));
 }
 
-/* ═══════════ File action delegation ═══════════ */
+function initTiltOn(els) {
+  if (!window.VanillaTilt || !els || !els.length) return;
+  try { VanillaTilt.init(els, { max: 2, speed: 400 }); } catch (_) {}
+}
+
 filesList.addEventListener('click', (e) => {
   const btn = e.target.closest('button');
   if (!btn) return;
@@ -609,41 +711,71 @@ filesList.addEventListener('click', (e) => {
   const key = row.dataset.key;
   if (!key) return;
 
-  if (btn.classList.contains('view-btn'))   previewFile(key);
-  else if (btn.classList.contains('dl-btn'))     downloadFile(key);
+  if (btn.classList.contains('view-btn')) previewFile(key);
+  else if (btn.classList.contains('dl-btn')) downloadFile(key);
   else if (btn.classList.contains('rename-btn')) renameFile(key);
-  else if (btn.classList.contains('del-btn'))    deleteFile(key);
+  else if (btn.classList.contains('del-btn')) deleteFile(key);
 });
 
-/* ═══════════ Search ═══════════ */
-const applyFilterDebounced = debounce(applyFilter, 120);
-
-searchInput.addEventListener('input', () => {
-  state.query = searchInput.value;
-  searchClear.classList.toggle('hidden', !searchInput.value);
-  applyFilterDebounced();
-});
-
-searchClear.addEventListener('click', () => {
-  searchInput.value = '';
-  state.query = '';
-  searchClear.classList.add('hidden');
-  applyFilter();
-  searchInput.focus();
-});
-
-/* ⌘K / Ctrl+K to focus search */
-document.addEventListener('keydown', (e) => {
-  const isMac = navigator.platform.toLowerCase().includes('mac');
-  const mod = isMac ? e.metaKey : e.ctrlKey;
-  if (mod && e.key.toLowerCase() === 'k' && !appView.classList.contains('hidden')) {
-    e.preventDefault();
-    searchInput.focus();
-    searchInput.select();
+function toggleCommandPalette() {
+  const isHidden = cpModal.classList.contains('hidden');
+  if (isHidden) {
+    cpModal.classList.remove('hidden');
+    setTimeout(() => cpInput.focus(), 50);
+    renderCpResults('');
+  } else {
+    cpModal.classList.add('hidden');
+    cpInput.value = '';
   }
-});
+}
 
-/* ═══════════ Upload ═══════════ */
+searchTrigger.addEventListener('click', toggleCommandPalette);
+cpBackdrop.addEventListener('click', toggleCommandPalette);
+
+cpInput.addEventListener('input', (e) => renderCpResults(e.target.value));
+
+function renderCpResults(query) {
+  const q = (query || '').toLowerCase().trim();
+  const matches = q
+    ? state.files.filter(f => displayName(f.key).toLowerCase().includes(q)).slice(0, 20)
+    : state.files.slice(0, 8);
+
+  let html = '';
+
+  if (!q) {
+    html += `<div class="cp-item" data-action="theme">🎨 Toggle Theme</div>`;
+    html += `<div class="cp-item" data-action="upload">📤 Upload File</div>`;
+    if (matches.length) html += `<div class="cp-section">Recent files</div>`;
+  }
+
+  matches.forEach(f => {
+    const name = displayName(f.key);
+    const meta = getFileMeta(name);
+    html += `<div class="cp-item" data-key="${escapeHtml(f.key)}">${meta.icon} ${escapeHtml(name)}</div>`;
+  });
+
+  if (!html) html = `<div class="cp-empty">no results</div>`;
+
+  cpResults.innerHTML = html;
+
+  cpResults.querySelectorAll('.cp-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const action = el.dataset.action;
+      const key = el.dataset.key;
+      if (action === 'theme') {
+        toggleTheme();
+        toggleCommandPalette();
+      } else if (action === 'upload') {
+        toggleCommandPalette();
+        fileInput.click();
+      } else if (key) {
+        toggleCommandPalette();
+        previewFile(key);
+      }
+    });
+  });
+}
+
 let dragCounter = 0;
 
 uploadZone.addEventListener('click', (e) => {
@@ -694,7 +826,6 @@ fileInput.addEventListener('change', () => {
 
 fabUpload.addEventListener('click', () => fileInput.click());
 
-/* Paste upload */
 document.addEventListener('paste', (e) => {
   if (appView.classList.contains('hidden')) return;
   const target = e.target;
@@ -707,7 +838,6 @@ document.addEventListener('paste', (e) => {
   }
 });
 
-/* ═══════════ Upload queue ═══════════ */
 function enqueueFiles(files) {
   if (!navigator.onLine) {
     showToast("you're offline — can't upload now", 'error');
@@ -732,7 +862,7 @@ function enqueueFiles(files) {
     const task = {
       id: uid(),
       file,
-      status: 'queued',   // queued | uploading | done | error | cancelled
+      status: 'queued',
       progress: 0,
       error: null,
       xhr: null,
@@ -752,8 +882,7 @@ function pumpQueue() {
     startUpload(next);
   }
   if (!state.uploadQueue.some(t => t.status === 'queued' || t.status === 'uploading')) {
-    // All done → cleanup after delay
-    if (state.uploadQueue.every(t => t.status === 'done' || t.status === 'cancelled')) {
+    if (state.uploadQueue.length && state.uploadQueue.every(t => t.status === 'done' || t.status === 'cancelled')) {
       setTimeout(hideQueueIfDone, 1400);
     }
   }
@@ -845,6 +974,9 @@ function startUpload(task) {
       task.progress = 100;
       renderUploadItem(task);
       showToast(`${task.file.name} uploaded`, 'success');
+      playSound('success');
+      triggerHaptic();
+      fireConfetti();
       loadFiles(false);
     } else {
       let msg = 'Upload failed';
@@ -885,11 +1017,9 @@ function startUpload(task) {
     pumpQueue();
   };
 
-  xhr.send((() => {
-    const fd = new FormData();
-    fd.append('file', task.file, task.file.name);
-    return fd;
-  })());
+  const fd = new FormData();
+  fd.append('file', task.file, task.file.name);
+  xhr.send(fd);
 }
 
 function cancelUpload(task) {
@@ -918,7 +1048,20 @@ function hideQueueIfDone() {
   }
 }
 
-/* ═══════════ Download ═══════════ */
+function fireConfetti() {
+  if (!window.confetti) return;
+  try {
+    confetti({
+      particleCount: 90,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: state.theme === 'matcha'
+        ? ['#a3e635', '#22c55e', '#4ade80']
+        : ['#a855f7', '#ec4899', '#22d3ee'],
+    });
+  } catch (_) {}
+}
+
 async function downloadFile(key) {
   try {
     const res = await fetch(`${API}/download/${encodeURIComponent(key)}`, {
@@ -949,9 +1092,9 @@ async function downloadFile(key) {
   }
 }
 
-/* ═══════════ Delete ═══════════ */
 async function deleteFile(key) {
   const name = displayName(key);
+  playSound('delete');
   const ok = await showConfirm({
     title: 'delete this file?',
     message: `"${name}" will be permanently removed.`,
@@ -971,13 +1114,11 @@ async function deleteFile(key) {
   }
 }
 
-/* ═══════════ Rename ═══════════ */
 async function renameFile(key) {
   const currentName = displayName(key);
   const newName = await showRename(currentName);
   if (!newName || newName === currentName) return;
 
-  // guard against path-ish characters
   if (/[\\/]/.test(newName)) {
     showToast('name cannot contain slashes', 'error');
     return;
@@ -996,7 +1137,6 @@ async function renameFile(key) {
   }
 }
 
-/* ═══════════ Copy to clipboard ═══════════ */
 async function copyTextToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     await navigator.clipboard.writeText(text);
@@ -1036,7 +1176,6 @@ previewDownload.addEventListener('click', () => {
   if (state.currentPreviewKey) downloadFile(state.currentPreviewKey);
 });
 
-/* ═══════════ Preview ═══════════ */
 let previewCleanup = null;
 
 async function previewFile(key) {
@@ -1130,7 +1269,6 @@ async function previewFile(key) {
 function closePreview() {
   if (previewModal.classList.contains('hidden')) return;
   previewModal.classList.add('hidden');
-  // stop media
   previewBody.querySelectorAll('video, audio').forEach(el => {
     try { el.pause(); el.src = ''; } catch (_) {}
   });
@@ -1148,43 +1286,72 @@ function closePreview() {
 previewClose.addEventListener('click', closePreview);
 previewModal.querySelector('[data-close-preview]').addEventListener('click', closePreview);
 
-/* ═══════════ Global keyboard ═══════════ */
 document.addEventListener('keydown', (e) => {
+  const isMac = navigator.platform.toLowerCase().includes('mac');
+  const mod = isMac ? e.metaKey : e.ctrlKey;
+
+  if (mod && e.key.toLowerCase() === 'k' && !appView.classList.contains('hidden')) {
+    e.preventDefault();
+    toggleCommandPalette();
+    return;
+  }
+
   if (e.key === 'Escape') {
+    if (!cpModal.classList.contains('hidden')) { toggleCommandPalette(); return; }
     if (!previewModal.classList.contains('hidden')) { closePreview(); return; }
     if (!confirmModal.classList.contains('hidden')) { closeConfirm(false); return; }
     if (!renameModal.classList.contains('hidden')) { closeRename(null); return; }
   }
 });
 
-/* ═══════════ Visibility → reload on return ═══════════ */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible'
       && state.token
       && !appView.classList.contains('hidden')) {
-    // if token expired while away
     if (state.expiresAt && Date.now() > state.expiresAt) {
       doLogout('Session expired. Login again.');
       return;
     }
-    // refresh list quietly
     if (state.listLoaded) loadFiles(false);
   }
 });
 
-/* ═══════════ Prevent accidental data loss on unload w/ uploads ═══════════ */
 window.addEventListener('beforeunload', (e) => {
-  const active = state.uploadQueue.some(t => t.status === 'uploading');
+  const active = state.uploadQueue.some(t => t.status === 'uploading' || t.status === 'queued');
   if (active) {
     e.preventDefault();
     e.returnValue = '';
   }
 });
 
-/* ═══════════ Init: focus username on first paint ═══════════ */
 window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = localStorage.getItem('gv-theme');
+    if (saved === 'matcha') applyTheme('matcha');
+    else applyTheme('default');
+  } catch (_) {
+    applyTheme('default');
+  }
+
+  initCustomCursor();
+  initTiltOn(document.querySelectorAll('[data-tilt]'));
+
   const u = $('username');
   if (u && !loginView.classList.contains('hidden')) {
     setTimeout(() => u.focus(), 200);
+  }
+});
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth <= 768) {
+    const c = $('cursor');
+    const f = $('cursor-follower');
+    if (c) c.style.display = 'none';
+    if (f) f.style.display = 'none';
+  } else {
+    const c = $('cursor');
+    const f = $('cursor-follower');
+    if (c) c.style.display = '';
+    if (f) f.style.display = '';
   }
 });

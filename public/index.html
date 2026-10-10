@@ -15,9 +15,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body data-theme="default">
 
-<!-- background layers -->
+<div id="cursor" class="custom-cursor hidden-mobile"></div>
+<div id="cursor-follower" class="custom-cursor-follower hidden-mobile"></div>
+
 <div class="bg-stack" aria-hidden="true">
   <div class="bg-aurora"></div>
   <div class="bg-grid"></div>
@@ -25,16 +27,14 @@
   <div class="bg-vignette"></div>
 </div>
 
-<!-- network banner -->
 <div id="net-banner" class="net-banner hidden" role="status" aria-live="polite">
   <span class="net-dot"></span>
   <span id="net-text">you're offline — changes won't sync</span>
 </div>
 
-<!-- ══════════════ LOGIN ══════════════ -->
 <section id="login-view" class="view login-view">
   <div class="login-shell">
-    <div class="login-card">
+    <div class="login-card" data-tilt data-tilt-max="5" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.2">
       <header class="brand">
         <div class="brand-logo-wrap">
           <img src="/assets/favicon.png" alt="" class="brand-logo" draggable="false">
@@ -63,7 +63,7 @@
               placeholder="••••••••"
               autocomplete="current-password"
               aria-label="Password" required>
-            <button type="button" class="pw-toggle" id="pw-toggle"
+            <button type="button" class="pw-toggle cursor-magnetic" id="pw-toggle"
               aria-label="Show password" aria-pressed="false">
               <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                 <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
@@ -75,7 +75,7 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-primary" id="login-btn">
+        <button type="submit" class="btn-primary cursor-magnetic" id="login-btn">
           <span class="btn-text">enter vault</span>
           <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           <span class="btn-spinner hidden" aria-hidden="true"></span>
@@ -89,7 +89,6 @@
   </div>
 </section>
 
-<!-- ══════════════ APP ══════════════ -->
 <section id="app-view" class="view app-view hidden">
 
   <header class="topbar">
@@ -99,16 +98,17 @@
     </div>
 
     <div class="topbar-actions">
-      <div class="search-box" id="search-box">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" id="search-input" placeholder="search…" aria-label="Search files"
-          autocapitalize="off" autocorrect="off" spellcheck="false">
-        <button type="button" class="search-clear hidden" id="search-clear" aria-label="Clear search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
+      <button class="search-trigger cursor-magnetic" id="search-trigger" aria-label="Search files">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>Search</span>
+        <kbd>⌘K</kbd>
+      </button>
 
-      <button id="logout-btn" class="btn-icon-ghost" aria-label="Logout" title="logout">
+      <button id="theme-btn" class="btn-icon-ghost cursor-magnetic" aria-label="Toggle Theme" title="theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+
+      <button id="logout-btn" class="btn-icon-ghost cursor-magnetic" aria-label="Logout" title="logout">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
       </button>
     </div>
@@ -129,7 +129,7 @@
     </section>
 
     <section class="stats">
-      <article class="stat-card">
+      <article class="stat-card cursor-magnetic" data-tilt data-tilt-max="2" data-tilt-speed="400">
         <div class="stat-icon stat-icon-files">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
         </div>
@@ -139,7 +139,7 @@
         </div>
       </article>
 
-      <article class="stat-card">
+      <article class="stat-card cursor-magnetic" data-tilt data-tilt-max="2" data-tilt-speed="400">
         <div class="stat-icon stat-icon-size">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         </div>
@@ -150,7 +150,7 @@
       </article>
     </section>
 
-    <section class="upload-zone" id="upload-zone" tabindex="0" role="button" aria-label="Upload files">
+    <section class="upload-zone cursor-magnetic" id="upload-zone" tabindex="0" role="button" aria-label="Upload files">
       <input type="file" id="file-input" multiple hidden>
       <div class="upload-inner">
         <div class="upload-icon-wrap">
@@ -166,7 +166,6 @@
       </div>
     </section>
 
-    <!-- Upload queue -->
     <section id="upload-queue" class="upload-queue hidden" aria-live="polite"></section>
 
     <section class="files-section">
@@ -179,12 +178,23 @@
 
   </main>
 
-  <button id="fab-upload" class="fab" aria-label="Upload files">
+  <button id="fab-upload" class="fab cursor-magnetic" aria-label="Upload files">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M12 5v14M5 12h14"/></svg>
   </button>
 </section>
 
-<!-- ══════════════ PREVIEW MODAL ══════════════ -->
+<div id="command-palette" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-backdrop" id="cp-backdrop"></div>
+  <div class="cp-content">
+    <div class="cp-search-wrap">
+      <svg class="cp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="cp-input" placeholder="Search files or type a command..." autocomplete="off" spellcheck="false">
+      <kbd class="cp-esc">ESC</kbd>
+    </div>
+    <div class="cp-results" id="cp-results"></div>
+  </div>
+</div>
+
 <div id="preview-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="preview-title">
   <div class="modal-backdrop" data-close-preview></div>
   <div class="modal-content preview-content">
@@ -192,13 +202,13 @@
     <header class="modal-header">
       <span id="preview-title">preview</span>
       <div class="modal-header-actions">
-        <button id="preview-download" class="btn-icon-ghost" aria-label="Download" title="download">
+        <button id="preview-download" class="btn-icon-ghost cursor-magnetic" aria-label="Download" title="download">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
         </button>
-        <button id="preview-copy" class="btn-icon-ghost hidden" aria-label="Copy content" title="copy">
+        <button id="preview-copy" class="btn-icon-ghost hidden cursor-magnetic" aria-label="Copy content" title="copy">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
-        <button id="preview-close" class="btn-icon-ghost" aria-label="Close">
+        <button id="preview-close" class="btn-icon-ghost cursor-magnetic" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </div>
@@ -207,7 +217,6 @@
   </div>
 </div>
 
-<!-- ══════════════ CONFIRM MODAL ══════════════ -->
 <div id="confirm-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
   <div class="modal-backdrop" data-close-confirm></div>
   <div class="confirm-content">
@@ -215,13 +224,12 @@
     <h4 id="confirm-title">are you sure?</h4>
     <p id="confirm-message">this action cannot be undone.</p>
     <div class="confirm-actions">
-      <button class="btn-ghost" id="confirm-cancel">cancel</button>
-      <button class="btn-danger" id="confirm-ok">delete</button>
+      <button class="btn-ghost cursor-magnetic" id="confirm-cancel">cancel</button>
+      <button class="btn-danger cursor-magnetic" id="confirm-ok">delete</button>
     </div>
   </div>
 </div>
 
-<!-- ══════════════ RENAME MODAL ══════════════ -->
 <div id="rename-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rename-title">
   <div class="modal-backdrop" data-close-rename></div>
   <div class="confirm-content">
@@ -231,14 +239,16 @@
     <input type="text" id="rename-input" class="rename-input" placeholder="new name"
       autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="200">
     <div class="confirm-actions">
-      <button class="btn-ghost" id="rename-cancel">cancel</button>
-      <button class="btn-accent" id="rename-ok">rename</button>
+      <button class="btn-ghost cursor-magnetic" id="rename-cancel">cancel</button>
+      <button class="btn-accent cursor-magnetic" id="rename-ok">rename</button>
     </div>
   </div>
 </div>
 
 <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
 <script src="/app.js" defer></script>
