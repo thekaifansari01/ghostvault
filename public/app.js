@@ -26,6 +26,7 @@ const filesList = $('files-list');
 const statCount = $('stat-count');
 const statSize = $('stat-size');
 const countChip = $('files-count-chip');
+const heroGreeting = $('hero-greeting');
 
 const previewModal = $('preview-modal');
 const previewBody = $('preview-body');
@@ -88,6 +89,10 @@ function escapeHtml(s) {
   }[c]));
 }
 
+function escapeRegex(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function formatSize(bytes) {
   if (!Number.isFinite(bytes) || bytes < 0) return '—';
   if (bytes < 1024) return bytes + ' B';
@@ -101,7 +106,7 @@ function relativeTime(ts) {
   const then = new Date(ts).getTime();
   if (!Number.isFinite(then)) return '';
   const diff = Math.floor((now - then) / 1000);
-
+  if (diff < 0) return 'just now';
   if (diff < 10) return 'just now';
   if (diff < 60) return diff + 's ago';
   if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
@@ -134,6 +139,18 @@ function uid() {
   return 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+function setGreeting() {
+  if (!heroGreeting) return;
+  const h = new Date().getHours();
+  let text, emoji;
+  if (h < 5) { text = 'still up'; emoji = '🌙'; }
+  else if (h < 12) { text = 'morning'; emoji = '☀️'; }
+  else if (h < 17) { text = 'afternoon'; emoji = '🌤️'; }
+  else if (h < 22) { text = 'evening'; emoji = '🌆'; }
+  else { text = 'late night'; emoji = '🌙'; }
+  heroGreeting.innerHTML = `${text} <span class="wave">${emoji}</span>`;
+}
+
 let audioCtx = null;
 function playSound(type) {
   try {
@@ -148,32 +165,36 @@ function playSound(type) {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(600, audioCtx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
-      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.1);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     } else if (type === 'success') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(400, audioCtx.currentTime);
       osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
-      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.3);
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.32);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.32);
     } else if (type === 'delete') {
       osc.type = 'square';
-      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(180, audioCtx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
-      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.2);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } else if (type === 'pop') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.06);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.06);
     }
   } catch (_) {}
 }
 
 function triggerHaptic() {
-  try { if (navigator.vibrate) navigator.vibrate(50); } catch (_) {}
+  try { if (navigator.vibrate) navigator.vibrate(40); } catch (_) {}
 }
 
 function initCustomCursor() {
@@ -182,8 +203,8 @@ function initCustomCursor() {
   const follower = $('cursor-follower');
   if (!cursor || !follower) return;
 
-  let mouseX = 0, mouseY = 0;
-  let fX = 0, fY = 0;
+  let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+  let fX = mouseX, fY = mouseY;
 
   document.addEventListener('mousemove', (e) => {
     mouseX = e.clientX;
@@ -193,32 +214,26 @@ function initCustomCursor() {
   });
 
   function render() {
-    fX += (mouseX - fX) * 0.2;
-    fY += (mouseY - fY) * 0.2;
+    fX += (mouseX - fX) * 0.22;
+    fY += (mouseY - fY) * 0.22;
     follower.style.left = fX + 'px';
     follower.style.top = fY + 'px';
     requestAnimationFrame(render);
   }
   render();
+
+  const hoverTargets = 'button, input, a, .cursor-magnetic, .file-row, .stat-card, .upload-zone, .stash-search, .cp-item';
+  document.addEventListener('mouseover', (e) => {
+    if (!e.target.closest(hoverTargets)) return;
+    cursor.classList.add('hover');
+    follower.classList.add('hover');
+  });
+  document.addEventListener('mouseout', (e) => {
+    if (!e.target.closest(hoverTargets)) return;
+    cursor.classList.remove('hover');
+    follower.classList.remove('hover');
+  });
 }
-
-document.addEventListener('mouseover', (e) => {
-  const t = e.target.closest('button, input, a, .cursor-magnetic, .file-row, .stat-card, .upload-zone');
-  if (!t) return;
-  const c = $('cursor');
-  const f = $('cursor-follower');
-  if (c) c.classList.add('hover');
-  if (f) f.classList.add('hover');
-});
-
-document.addEventListener('mouseout', (e) => {
-  const t = e.target.closest('button, input, a, .cursor-magnetic, .file-row, .stat-card, .upload-zone');
-  if (!t) return;
-  const c = $('cursor');
-  const f = $('cursor-follower');
-  if (c) c.classList.remove('hover');
-  if (f) f.classList.remove('hover');
-});
 
 const TOAST_ICONS = { success: '✅', error: '⚠️', info: 'ℹ️', warning: '⚡' };
 const TOAST_DURATION = 3400;
@@ -281,7 +296,6 @@ function showConfirm({ title, message, okText = 'delete', icon = '🗑️', dang
     confirmOk.className = danger ? 'btn-danger' : 'btn-accent';
     confirmModal.classList.remove('hidden');
     confirmResolve = resolve;
-
     confirmCleanup = trapFocus(confirmModal);
     setTimeout(() => confirmOk.focus(), 60);
   });
@@ -314,7 +328,6 @@ function showRename(currentName) {
     renameInput.value = currentName;
     renameModal.classList.remove('hidden');
     renameResolve = resolve;
-
     renameCleanup = trapFocus(renameModal);
 
     setTimeout(() => {
@@ -367,6 +380,7 @@ pwToggle.addEventListener('click', () => {
   pwToggle.setAttribute('aria-pressed', String(!isText));
   pwToggle.setAttribute('aria-label', isText ? 'Show password' : 'Hide password');
   passwordInput.focus();
+  playSound('pop');
 });
 
 function applyTheme(theme) {
@@ -424,6 +438,7 @@ loginForm.addEventListener('submit', async (e) => {
 
   if (!username || !password) {
     loginError.textContent = 'both fields, please ✋';
+    playSound('delete');
     return;
   }
   if (!navigator.onLine) {
@@ -486,6 +501,7 @@ function showApp() {
   if (stashSearch) stashSearch.value = '';
   if (stashSearchClear) stashSearchClear.classList.add('hidden');
   if (stashSearchWrap) stashSearchWrap.classList.remove('has-query');
+  setGreeting();
   loadFiles();
 }
 
@@ -617,8 +633,18 @@ async function loadFiles(showSkeleton = true) {
     state.files = files;
     state.listLoaded = true;
 
-    statCount.textContent = Number.isFinite(data.count) ? data.count : files.length;
-    statSize.textContent = formatSize(Number(data.total_size) || 0);
+    const newCount = Number.isFinite(data.count) ? data.count : files.length;
+    const newSize = formatSize(Number(data.total_size) || 0);
+    if (statCount.textContent !== String(newCount)) {
+      statCount.textContent = newCount;
+      statCount.classList.add('bump');
+      setTimeout(() => statCount.classList.remove('bump'), 500);
+    }
+    if (statSize.textContent !== newSize) {
+      statSize.textContent = newSize;
+      statSize.classList.add('bump');
+      setTimeout(() => statSize.classList.remove('bump'), 500);
+    }
 
     applyFilter();
   } catch (err) {
@@ -642,20 +668,13 @@ function applyFilter() {
   const filtered = q
     ? state.files.filter(f => displayName(f.key).toLowerCase().includes(q))
     : state.files;
-
   renderFiles(filtered, q);
 }
 
 function highlightMatch(text, query) {
   if (!query) return escapeHtml(text);
-  const lower = text.toLowerCase();
-  const q = query.toLowerCase();
-  const idx = lower.indexOf(q);
-  if (idx === -1) return escapeHtml(text);
-  const before = escapeHtml(text.slice(0, idx));
-  const match = escapeHtml(text.slice(idx, idx + q.length));
-  const after = escapeHtml(text.slice(idx + q.length));
-  return `${before}<mark>${match}</mark>${after}`;
+  const re = new RegExp(`(${escapeRegex(query)})`, 'ig');
+  return escapeHtml(text).replace(re, '<mark>$1</mark>');
 }
 
 function renderFiles(files, query = '') {
@@ -679,16 +698,22 @@ function renderFiles(files, query = '') {
     return;
   }
 
-  countChip.textContent = query
+  const prev = countChip.textContent;
+  const newText = query
     ? `${files.length} / ${state.files.length}`
     : `${files.length} ${files.length === 1 ? 'file' : 'files'}`;
+  countChip.textContent = newText;
+  if (prev !== newText && query) {
+    countChip.classList.add('bump');
+    setTimeout(() => countChip.classList.remove('bump'), 500);
+  }
 
   filesList.innerHTML = files.map((f, i) => {
     const name = displayName(f.key);
     const meta = getFileMeta(name);
     const sizeStr = formatSize(Number(f.size) || 0);
     const timeStr = relativeTime(f.last_modified);
-    const delay = Math.min(i * 28, 300);
+    const delay = Math.min(i * 30, 350);
     const nameHtml = highlightMatch(name, query);
     return `
       <div class="file-row" data-key="${escapeHtml(f.key)}" style="animation-delay:${delay}ms">
@@ -734,6 +759,8 @@ filesList.addEventListener('click', (e) => {
   const key = row.dataset.key;
   if (!key) return;
 
+  playSound('pop');
+
   if (btn.classList.contains('view-btn')) previewFile(key);
   else if (btn.classList.contains('dl-btn')) downloadFile(key);
   else if (btn.classList.contains('rename-btn')) renameFile(key);
@@ -746,6 +773,7 @@ function toggleCommandPalette() {
     cpModal.classList.remove('hidden');
     setTimeout(() => cpInput.focus(), 50);
     renderCpResults('');
+    playSound('pop');
   } else {
     cpModal.classList.add('hidden');
     cpInput.value = '';
@@ -775,7 +803,10 @@ const stashSearchDebounced = debounce(() => {
   applyFilter();
 }, 90);
 
-stashSearch.addEventListener('input', stashSearchDebounced);
+stashSearch.addEventListener('input', () => {
+  playSound('pop');
+  stashSearchDebounced();
+});
 
 stashSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -785,6 +816,7 @@ stashSearch.addEventListener('keydown', (e) => {
       stashSearchClear.classList.add('hidden');
       stashSearchWrap.classList.remove('has-query');
       applyFilter();
+      playSound('delete');
     } else {
       stashSearch.blur();
     }
@@ -798,6 +830,7 @@ stashSearchClear.addEventListener('click', () => {
   stashSearchWrap.classList.remove('has-query');
   applyFilter();
   stashSearch.focus();
+  playSound('delete');
 });
 
 const CP_COMMANDS = [
@@ -1045,6 +1078,7 @@ function startUpload(task) {
       task.error = msg;
       renderUploadItem(task);
       showToast(msg, 'error');
+      playSound('delete');
     }
     pumpQueue();
   };
@@ -1092,6 +1126,7 @@ function cancelUpload(task) {
     state.uploadQueue = state.uploadQueue.filter(t => t.id !== task.id);
   }
   hideQueueIfDone();
+  playSound('delete');
 }
 
 function hideQueueIfDone() {
@@ -1109,7 +1144,7 @@ function fireConfetti() {
   if (!window.confetti) return;
   try {
     confetti({
-      particleCount: 90,
+      particleCount: 80,
       spread: 70,
       origin: { y: 0.6 },
       colors: state.theme === 'matcha'
@@ -1164,6 +1199,7 @@ async function deleteFile(key) {
   try {
     await api(`/delete-file?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
     showToast(`${name} deleted`, 'success');
+    playSound('success');
     loadFiles(false);
     if (state.currentPreviewKey === key) closePreview();
   } catch (err) {
@@ -1188,6 +1224,7 @@ async function renameFile(key) {
     });
     if (res && res.status === 'unchanged') return;
     showToast(`renamed to ${newName}`, 'success');
+    playSound('success');
     loadFiles(false);
   } catch (err) {
     showToast(err.message, 'error');
@@ -1220,6 +1257,7 @@ previewCopy.addEventListener('click', async () => {
     await copyTextToClipboard(state.currentPreviewText);
     previewCopy.innerHTML = ICON_CHECK;
     previewCopy.classList.add('copied');
+    playSound('pop');
     setTimeout(() => {
       previewCopy.innerHTML = ICON_COPY;
       previewCopy.classList.remove('copied');
@@ -1417,6 +1455,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   initCustomCursor();
   initTiltOn(document.querySelectorAll('[data-tilt]'));
+  setGreeting();
 
   const u = $('username');
   if (u && !loginView.classList.contains('hidden')) {
@@ -1425,14 +1464,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('resize', () => {
+  const c = $('cursor');
+  const f = $('cursor-follower');
   if (window.innerWidth <= 768) {
-    const c = $('cursor');
-    const f = $('cursor-follower');
     if (c) c.style.display = 'none';
     if (f) f.style.display = 'none';
   } else {
-    const c = $('cursor');
-    const f = $('cursor-follower');
     if (c) c.style.display = '';
     if (f) f.style.display = '';
   }

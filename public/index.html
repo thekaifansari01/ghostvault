@@ -100,7 +100,7 @@
     <div class="topbar-actions">
       <button class="search-trigger cursor-magnetic" id="search-trigger" aria-label="Command palette">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-        <span>Commands</span>
+        <span>commands</span>
         <kbd>⌘K</kbd>
       </button>
 
@@ -118,7 +118,7 @@
 
     <section class="hero">
       <div class="hero-text">
-        <h2>hey there <span class="wave">👋</span></h2>
+        <h2 id="hero-greeting">hey there <span class="wave">👋</span></h2>
         <p>drop your files, keep them safe. <span class="hl">nothing lingers</span> after you leave.</p>
       </div>
       <div class="hero-orbs" aria-hidden="true">
@@ -204,8 +204,8 @@
   <div class="modal-backdrop" id="cp-backdrop"></div>
   <div class="cp-content">
     <div class="cp-search-wrap">
-      <svg class="cp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="text" id="cp-input" placeholder="Search files or type a command..." autocomplete="off" spellcheck="false">
+      <svg class="cp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <input type="text" id="cp-input" placeholder="type a command..." autocomplete="off" spellcheck="false">
       <kbd class="cp-esc">ESC</kbd>
     </div>
     <div class="cp-results" id="cp-results"></div>
