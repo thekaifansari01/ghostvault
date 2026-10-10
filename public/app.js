@@ -57,6 +57,10 @@ const cpInput = $('cp-input');
 const cpResults = $('cp-results');
 const cpBackdrop = $('cp-backdrop');
 
+const stashSearch = $('stash-search');
+const stashSearchWrap = $('stash-search-wrap');
+const stashSearchClear = $('stash-search-clear');
+
 const state = {
   token: null,
   expiresAt: 0,
@@ -479,6 +483,9 @@ function showApp() {
     appView.classList.remove('hidden');
   });
   state.query = '';
+  if (stashSearch) stashSearch.value = '';
+  if (stashSearchClear) stashSearchClear.classList.add('hidden');
+  if (stashSearchWrap) stashSearchWrap.classList.remove('has-query');
   loadFiles();
 }
 
@@ -510,6 +517,9 @@ function doLogout(message) {
   statCount.textContent = '0';
   statSize.textContent = '0 B';
   countChip.textContent = '';
+  if (stashSearch) stashSearch.value = '';
+  if (stashSearchClear) stashSearchClear.classList.add('hidden');
+  if (stashSearchWrap) stashSearchWrap.classList.remove('has-query');
   closePreview();
 }
 
@@ -636,6 +646,18 @@ function applyFilter() {
   renderFiles(filtered, q);
 }
 
+function highlightMatch(text, query) {
+  if (!query) return escapeHtml(text);
+  const lower = text.toLowerCase();
+  const q = query.toLowerCase();
+  const idx = lower.indexOf(q);
+  if (idx === -1) return escapeHtml(text);
+  const before = escapeHtml(text.slice(0, idx));
+  const match = escapeHtml(text.slice(idx, idx + q.length));
+  const after = escapeHtml(text.slice(idx + q.length));
+  return `${before}<mark>${match}</mark>${after}`;
+}
+
 function renderFiles(files, query = '') {
   if (!files.length) {
     countChip.textContent = '';
@@ -667,11 +689,12 @@ function renderFiles(files, query = '') {
     const sizeStr = formatSize(Number(f.size) || 0);
     const timeStr = relativeTime(f.last_modified);
     const delay = Math.min(i * 28, 300);
+    const nameHtml = highlightMatch(name, query);
     return `
       <div class="file-row" data-key="${escapeHtml(f.key)}" style="animation-delay:${delay}ms">
         <div class="file-icon-wrap ${meta.cls}">${meta.icon}</div>
         <div class="file-info">
-          <span class="file-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+          <span class="file-name" title="${escapeHtml(name)}">${nameHtml}</span>
           <span class="file-meta">
             <span>${sizeStr}</span>
             <span class="file-meta-dot"></span>
@@ -734,44 +757,78 @@ cpBackdrop.addEventListener('click', toggleCommandPalette);
 
 cpInput.addEventListener('input', (e) => renderCpResults(e.target.value));
 
+function focusStashSearch() {
+  if (!stashSearch) return;
+  const y = stashSearchWrap.getBoundingClientRect().top + window.scrollY - 100;
+  window.scrollTo({ top: y, behavior: 'smooth' });
+  setTimeout(() => {
+    stashSearch.focus();
+    stashSearch.select();
+  }, 180);
+}
+
+const stashSearchDebounced = debounce(() => {
+  state.query = stashSearch.value;
+  const hasQuery = !!stashSearch.value;
+  stashSearchClear.classList.toggle('hidden', !hasQuery);
+  stashSearchWrap.classList.toggle('has-query', hasQuery);
+  applyFilter();
+}, 90);
+
+stashSearch.addEventListener('input', stashSearchDebounced);
+
+stashSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (stashSearch.value) {
+      stashSearch.value = '';
+      state.query = '';
+      stashSearchClear.classList.add('hidden');
+      stashSearchWrap.classList.remove('has-query');
+      applyFilter();
+    } else {
+      stashSearch.blur();
+    }
+  }
+});
+
+stashSearchClear.addEventListener('click', () => {
+  stashSearch.value = '';
+  state.query = '';
+  stashSearchClear.classList.add('hidden');
+  stashSearchWrap.classList.remove('has-query');
+  applyFilter();
+  stashSearch.focus();
+});
+
+const CP_COMMANDS = [
+  { id: 'upload', icon: '📤', label: 'Upload File', hint: 'add new', run: () => { toggleCommandPalette(); fileInput.click(); } },
+  { id: 'search', icon: '🔎', label: 'Search Files', hint: 'jump to search', run: () => { toggleCommandPalette(); focusStashSearch(); } },
+  { id: 'theme', icon: '🎨', label: 'Toggle Theme', hint: 'matcha / violet', run: () => { toggleTheme(); toggleCommandPalette(); } },
+  { id: 'refresh', icon: '🔄', label: 'Refresh Files', hint: 'reload vault', run: () => { toggleCommandPalette(); loadFiles(false); showToast('refreshed', 'info'); } },
+  { id: 'logout', icon: '🚪', label: 'Logout', hint: 'end session', run: () => { toggleCommandPalette(); doLogout(); } },
+];
+
 function renderCpResults(query) {
   const q = (query || '').toLowerCase().trim();
   const matches = q
-    ? state.files.filter(f => displayName(f.key).toLowerCase().includes(q)).slice(0, 20)
-    : state.files.slice(0, 8);
+    ? CP_COMMANDS.filter(c => c.label.toLowerCase().includes(q) || c.id.includes(q))
+    : CP_COMMANDS;
 
   let html = '';
-
-  if (!q) {
-    html += `<div class="cp-item" data-action="theme">🎨 Toggle Theme</div>`;
-    html += `<div class="cp-item" data-action="upload">📤 Upload File</div>`;
-    if (matches.length) html += `<div class="cp-section">Recent files</div>`;
+  if (matches.length) {
+    html += `<div class="cp-section">Commands</div>`;
+    matches.forEach(c => {
+      html += `<div class="cp-item" data-cmd="${c.id}">${c.icon} ${escapeHtml(c.label)}<span class="cp-hint">${escapeHtml(c.hint)}</span></div>`;
+    });
   }
-
-  matches.forEach(f => {
-    const name = displayName(f.key);
-    const meta = getFileMeta(name);
-    html += `<div class="cp-item" data-key="${escapeHtml(f.key)}">${meta.icon} ${escapeHtml(name)}</div>`;
-  });
-
-  if (!html) html = `<div class="cp-empty">no results</div>`;
+  if (!html) html = `<div class="cp-empty">no matching command</div>`;
 
   cpResults.innerHTML = html;
 
   cpResults.querySelectorAll('.cp-item').forEach(el => {
     el.addEventListener('click', () => {
-      const action = el.dataset.action;
-      const key = el.dataset.key;
-      if (action === 'theme') {
-        toggleTheme();
-        toggleCommandPalette();
-      } else if (action === 'upload') {
-        toggleCommandPalette();
-        fileInput.click();
-      } else if (key) {
-        toggleCommandPalette();
-        previewFile(key);
-      }
+      const cmd = CP_COMMANDS.find(c => c.id === el.dataset.cmd);
+      if (cmd) cmd.run();
     });
   });
 }
@@ -1290,9 +1347,26 @@ document.addEventListener('keydown', (e) => {
   const isMac = navigator.platform.toLowerCase().includes('mac');
   const mod = isMac ? e.metaKey : e.ctrlKey;
 
+  const anyModalOpen = !cpModal.classList.contains('hidden')
+    || !previewModal.classList.contains('hidden')
+    || !confirmModal.classList.contains('hidden')
+    || !renameModal.classList.contains('hidden');
+
+  const typing = e.target && (
+    e.target.tagName === 'INPUT'
+    || e.target.tagName === 'TEXTAREA'
+    || e.target.isContentEditable
+  );
+
   if (mod && e.key.toLowerCase() === 'k' && !appView.classList.contains('hidden')) {
     e.preventDefault();
     toggleCommandPalette();
+    return;
+  }
+
+  if (e.key === '/' && !typing && !anyModalOpen && !appView.classList.contains('hidden')) {
+    e.preventDefault();
+    focusStashSearch();
     return;
   }
 
@@ -1301,6 +1375,14 @@ document.addEventListener('keydown', (e) => {
     if (!previewModal.classList.contains('hidden')) { closePreview(); return; }
     if (!confirmModal.classList.contains('hidden')) { closeConfirm(false); return; }
     if (!renameModal.classList.contains('hidden')) { closeRename(null); return; }
+    if (document.activeElement === stashSearch && stashSearch.value) {
+      stashSearch.value = '';
+      state.query = '';
+      stashSearchClear.classList.add('hidden');
+      stashSearchWrap.classList.remove('has-query');
+      applyFilter();
+      return;
+    }
   }
 });
 

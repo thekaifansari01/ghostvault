@@ -98,9 +98,9 @@
     </div>
 
     <div class="topbar-actions">
-      <button class="search-trigger cursor-magnetic" id="search-trigger" aria-label="Search files">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <span>Search</span>
+      <button class="search-trigger cursor-magnetic" id="search-trigger" aria-label="Command palette">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <span>Commands</span>
         <kbd>⌘K</kbd>
       </button>
 
@@ -173,6 +173,23 @@
         <h3>your stash</h3>
         <span class="count-chip" id="files-count-chip"></span>
       </div>
+
+      <div class="stash-search" id="stash-search-wrap">
+        <svg class="stash-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+        <input type="text" id="stash-search" class="stash-search-input"
+          placeholder="search your stash..."
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          aria-label="Search files">
+        <kbd class="stash-search-kbd">/</kbd>
+        <button type="button" class="stash-search-clear hidden" id="stash-search-clear" aria-label="Clear search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
       <div id="files-list" class="files-list"></div>
     </section>
 
